@@ -14,8 +14,6 @@ public class TestCaseBuilder {
         TestCaseDto testCase = new TestCaseDto();
         List<StepDto> steps = new ArrayList<>();
 
-       // System.out.println("\nWelcome to FSQS Toolkit!");
-
         System.out.print("\nFeature name: ");
         testCase.setFeatureName(scanner.nextLine());
 
@@ -29,12 +27,17 @@ public class TestCaseBuilder {
         do {
             System.out.print("Action (e.g. type, click, select, etc...): ");
             String action = scanner.nextLine();
-            System.out.print("Property name: ");
-            String prop = scanner.nextLine();
-            System.out.print("Property value: ");
-            String val = scanner.nextLine();
 
-            steps.add(new StepDto(action, prop, val));
+            System.out.print("Locator type (e.g. id, name, cssSelector, xpath, alt): ");
+            String locatorType = scanner.nextLine();
+
+            System.out.print("Locator value (e.g. field name, CSS selector, XPath): ");
+            String locatorValue = scanner.nextLine();
+
+            System.out.print("Action value (e.g. text to type or key to press, or leave blank): ");
+            String actionValue = scanner.nextLine();
+
+            steps.add(new StepDto(action, locatorType, locatorValue, actionValue));
 
             System.out.print("Add another property? (y/n): ");
             addMore = scanner.nextLine();
@@ -42,7 +45,6 @@ public class TestCaseBuilder {
 
         testCase.setSteps(steps);
 
-        // Summary output
         printSummary(testCase);
 
         System.out.print("Run this test case now? (y/n): ");
@@ -52,12 +54,13 @@ public class TestCaseBuilder {
     private void printSummary(TestCaseDto testCase) {
         System.out.println("\n======= TEST CASE SUMMARY =======");
         System.out.printf("🧪 Feature:         %s%n", testCase.getFeatureName());
-        System.out.printf("🌐 Target URL:      http://%s%n%n", testCase.getTargetUrl());
+        System.out.printf("🌐 Target URL:      %s%n%n", testCase.getTargetUrl());
 
         System.out.println("🔁 Steps:");
         int i = 1;
         for (StepDto step : testCase.getSteps()) {
-            System.out.printf("  %d. [%s]    %-10s => %s%n", i++, step.getAction(), step.getProperty(), step.getValue());
+            System.out.printf("  %d. [%s] using [%s=%s] => %s%n",
+                    i++, step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue());
         }
 
         System.out.printf("%n🎯 Event Trigger: %s%n", testCase.getEventListener());
