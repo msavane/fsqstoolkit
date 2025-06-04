@@ -8,7 +8,7 @@ import java.util.Scanner;
 
 public class ConsoleRunner {
 
-    public void run() {
+    public void run(TestCaseDto testCase) {
         Scanner scanner = new Scanner(System.in);
         TestCaseBuilder builder = new TestCaseBuilder();
         TestCaseService service = new TestCaseService();
@@ -16,10 +16,13 @@ public class ConsoleRunner {
         boolean continueRunning = true;
 
         while (continueRunning) {
-            TestCaseDto testCase = builder.buildFromInput();
+            if (testCase == null) {
+                testCase = builder.buildFromInput(); // only prompt if no test case passed
+            }
+
             service.printTestCaseSummary(testCase);
 
-            String runNow = promptYesNo(scanner, "Run this test case now? (y/n)");
+            String runNow = promptYesNo(scanner, "Run this test case now?");
             if (runNow.equals("y")) {
                 String style = promptChoice(scanner, "Choose execution style: (1) Standard  (2) Gherkin", "1", "2");
 
@@ -32,7 +35,7 @@ public class ConsoleRunner {
                 System.out.println("✅ Test run complete.");
             }
 
-            String saveNow = promptYesNo(scanner, "Would you like to save this test case? (y/n)");
+            String saveNow = promptYesNo(scanner, "Would you like to save this test case?");
             if (saveNow.equals("y")) {
                 String style = promptChoice(scanner, "Choose save format: (1) Standard  (2) Gherkin", "1", "2");
                 String filename = promptForInput(scanner, "Enter filename to save to (e.g., test.txt):");
@@ -42,15 +45,19 @@ public class ConsoleRunner {
                 System.out.println("💾 Test case saved to: " + filename);
             }
 
-            String again = promptYesNo(scanner, "Create another test case? (y/n)");
+            String again = promptYesNo(scanner, "Create another test case?");
             continueRunning = again.equals("y");
+            testCase = null; // reset only if they want another one
         }
 
         System.out.println("👋 Exiting FSQS Toolkit. Goodbye!");
         scanner.close();
     }
 
-    private String promptYesNo(Scanner scanner, String message) {
+    // ... [prompt methods remain the same] ...
+
+
+private String promptYesNo(Scanner scanner, String message) {
         String input;
         do {
             System.out.println(message + " [y/n]");
