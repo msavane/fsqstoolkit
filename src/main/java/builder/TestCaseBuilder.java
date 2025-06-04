@@ -11,59 +11,57 @@ public class TestCaseBuilder {
 
     public TestCaseDto buildFromInput() {
         Scanner scanner = new Scanner(System.in);
-        TestCaseDto testCase = new TestCaseDto();
+
+        System.out.println("\n🧱 Let's build your test case:");
+        System.out.print("🔤 Feature name: ");
+        String featureName = scanner.nextLine().trim();
+
+        System.out.print("🌐 Target URL: ");
+        String targetUrl = scanner.nextLine().trim();
+
+        System.out.println("🎯 Event trigger (optional – leave blank if not needed):");
+        System.out.print("   e.g. 'onLoginSubmit': ");
+        String eventTrigger = scanner.nextLine().trim();
+
         List<StepDto> steps = new ArrayList<>();
+        boolean addMore = true;
 
-        System.out.print("\nFeature name: ");
-        testCase.setFeatureName(scanner.nextLine());
+        while (addMore) {
+            System.out.println("\n➕ Add a step:");
 
-        System.out.print("Target URL: ");
-        testCase.setTargetUrl(scanner.nextLine());
+            System.out.print("🔧 Action (type, click, keypress): ");
+            String action = scanner.nextLine().trim();
 
-        System.out.print("Form listener (submit, update, delete.): ");
-        testCase.setEventListener(scanner.nextLine());
+            System.out.print("📍 Locator type (id, name, css, xpath, tag, alt): ");
+            String locatorType = scanner.nextLine().trim();
 
-        String addMore;
-        do {
-            System.out.print("Action (e.g. type, click, select, etc...): ");
-            String action = scanner.nextLine();
+            System.out.print("🔑 Locator value: ");
+            String locatorValue = scanner.nextLine().trim();
 
-            System.out.print("Locator type (e.g. id, name, cssSelector, xpath, alt): ");
-            String locatorType = scanner.nextLine();
+            String value = "";
+            if (action.equalsIgnoreCase("type") || action.equalsIgnoreCase("keypress")) {
+                System.out.print("💬 Value to input or key to press: ");
+                value = scanner.nextLine().trim();
+            }
 
-            System.out.print("Locator value (e.g. field name, CSS selector, XPath): ");
-            String locatorValue = scanner.nextLine();
+            StepDto step = new StepDto();
+            step.setAction(action);
+            step.setLocatorType(locatorType); // <-- added to match your service code
+            step.setProperty(locatorValue);   // <-- locator value
+            step.setValue(value);             // <-- input value or key
 
-            System.out.print("Action value (e.g. text to type or key to press, or leave blank): ");
-            String actionValue = scanner.nextLine();
+            steps.add(step);
 
-            steps.add(new StepDto(action, locatorType, locatorValue, actionValue));
-
-            System.out.print("Add another property? (y/n): ");
-            addMore = scanner.nextLine();
-        } while (addMore.equalsIgnoreCase("y"));
-
-        testCase.setSteps(steps);
-
-        printSummary(testCase);
-
-        System.out.print("Run this test case now? (y/n): ");
-        return testCase;
-    }
-
-    private void printSummary(TestCaseDto testCase) {
-        System.out.println("\n======= TEST CASE SUMMARY =======");
-        System.out.printf("🧪 Feature:         %s%n", testCase.getFeatureName());
-        System.out.printf("🌐 Target URL:      %s%n%n", testCase.getTargetUrl());
-
-        System.out.println("🔁 Steps:");
-        int i = 1;
-        for (StepDto step : testCase.getSteps()) {
-            System.out.printf("  %d. [%s] using [%s=%s] => %s%n",
-                    i++, step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue());
+            System.out.print("➕ Add another step? (y/n): ");
+            addMore = scanner.nextLine().trim().equalsIgnoreCase("y");
         }
 
-        System.out.printf("%n🎯 Event Trigger: %s%n", testCase.getEventListener());
-        System.out.println("=================================\n");
+        TestCaseDto testCase = new TestCaseDto();
+        testCase.setFeatureName(featureName);
+        testCase.setTargetUrl(targetUrl);
+        testCase.setEventListener(eventTrigger);
+        testCase.setSteps(steps);
+
+        return testCase;
     }
 }
