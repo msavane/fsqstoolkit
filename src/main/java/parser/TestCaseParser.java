@@ -37,7 +37,9 @@ public class TestCaseParser {
                     String raw = matcher.group(1).trim();
 
                     if (raw.startsWith("alt=")) {
-                        String locatorValue = raw.substring("alt=".length()).replaceAll("^\"|\"$", "").trim();
+                       // String locatorValue = raw.substring(4).trim().replace("\"", "");
+                        String locatorValue = raw.toString();
+                      //  String locatorValue = raw.substring("alt=".length()).replaceAll("^\"|\"$", "").trim();
                         steps.add(new StepDto("click", "alt", locatorValue, ""));
                     } else {
                         steps.add(new StepDto("click", "id", raw, ""));
