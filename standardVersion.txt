@@ -1,0 +1,8 @@
+Feature: log on IVC play movie
+Target URL: http://localhost:8080/
+Event Trigger: 
+
+Action: type, Locator Type: email, Locator Value: email, Value: test@email.com
+Action: type, Locator Type: password, Locator Value: password, Value: 123
+Action: click, Locator Type: submit, Locator Value: submit, Value: 
+Action: click, Locator Type: alt=Au nom du Christ, Locator Value: alt=Au nom du Christ, Value: 

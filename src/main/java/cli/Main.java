@@ -12,7 +12,9 @@ public class Main {
 
         try {
             TestCaseParser parser = new TestCaseParser();
-            TestCaseDto testCase = parser.loadFromScriptFile("testlogonplaymovie.txt");
+            //TestCaseDto testCase = parser.loadFromScriptFile("testlogonplaymovie.txt");//works with 2 Gherkin
+            TestCaseDto testCase = parser.loadFromScriptFile("standardVersion.txt");
+
 
             new ConsoleRunner().run(testCase); // run preloaded test
 

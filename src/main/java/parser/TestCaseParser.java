@@ -19,37 +19,102 @@ public class TestCaseParser {
 
         for (String line : lines) {
             line = line.trim();
+            if (line.isEmpty()) continue;
 
-            if (line.startsWith("navigate to ")) {
-                testCase.setTargetUrl(line.replace("navigate to ", "").trim());
+            // Toolkit-style headers
+            if (line.startsWith("🧪 Feature:")) {
+                testCase.setFeatureName(line.substring("🧪 Feature:".length()).trim());
+                continue;
+            }
 
-            } else if (line.startsWith("enter ")) {
-                Pattern pattern = Pattern.compile("enter \\\"(.*)\\\" into \\\"(.*)\\\"");
-                Matcher matcher = pattern.matcher(line);
-                if (matcher.find()) {
-                    steps.add(new StepDto("type", "id", matcher.group(2), matcher.group(1)));
+            if (line.startsWith("🌐 Target URL:")) {
+                testCase.setTargetUrl(line.substring("🌐 Target URL:".length()).trim());
+                continue;
+            }
+
+            if (line.startsWith("🎯 Event Trigger:")) {
+                testCase.setEventListener(line.substring("🎯 Event Trigger:".length()).trim());
+                continue;
+            }
+
+            // Toolkit-style step format
+            Matcher summaryStep = Pattern.compile("\\d+\\. \\[(.*?)\\] using \\[(.*?)=(.*?)\\] => ?(.*)").matcher(line);
+            if (summaryStep.find()) {
+                String action = summaryStep.group(1).trim();
+                String locatorType = summaryStep.group(2).trim();
+                String locatorValue = summaryStep.group(3).trim();
+                String value = summaryStep.group(4).trim();
+                steps.add(new StepDto(action, locatorType, locatorValue, value));
+                continue;
+            }
+
+            // Script-style: Feature, Target URL, Event Trigger
+            if (line.toLowerCase().startsWith("feature:")) {
+                testCase.setFeatureName(line.substring("feature:".length()).trim());
+                continue;
+            }
+
+            if (line.toLowerCase().startsWith("target url:")) {
+                testCase.setTargetUrl(line.substring("target url:".length()).trim());
+                continue;
+            }
+
+            if (line.toLowerCase().startsWith("event trigger:")) {
+                testCase.setEventListener(line.substring("event trigger:".length()).trim());
+                continue;
+            }
+
+            // Gherkin-style: navigate to ...
+            if (line.toLowerCase().startsWith("navigate to ")) {
+                testCase.setTargetUrl(line.substring("navigate to ".length()).trim());
+                continue;
+            }
+
+            // Structured Action line
+            Pattern actionPattern = Pattern.compile(
+                    "Action:\\s*(\\w+),\\s*Locator Type:\\s*([^,]+),\\s*Locator Value:\\s*([^,]+),\\s*Value:\\s*(.*)"
+            );
+            Matcher actionMatcher = actionPattern.matcher(line);
+            if (actionMatcher.find()) {
+                steps.add(new StepDto(
+                        actionMatcher.group(1).trim(),
+                        actionMatcher.group(2).trim(),
+                        actionMatcher.group(3).trim(),
+                        actionMatcher.group(4).trim()
+                ));
+                continue;
+            }
+
+            // Gherkin-style: enter "value" into "field"
+            Matcher enterMatcher = Pattern.compile("enter\\s+\"(.*?)\"\\s+into\\s+\"(.*?)\"").matcher(line);
+            if (enterMatcher.find()) {
+                steps.add(new StepDto("type", "id", enterMatcher.group(2).trim(), enterMatcher.group(1).trim()));
+                continue;
+            }
+
+            // Gherkin-style: click "id" or click "alt=..."
+            Matcher clickMatcher = Pattern.compile("click\\s+\"(.*?)\"").matcher(line);
+            if (clickMatcher.find()) {
+                String raw = clickMatcher.group(1).trim();
+                String locatorType = "id";
+                String locatorValue = raw;
+
+                if (raw.startsWith("alt=")) {
+                    locatorType = "alt";
+                    //locatorValue = raw.substring("alt=".length()).trim();
                 }
 
-            } else if (line.startsWith("click ")) {
-                Pattern pattern = Pattern.compile("click \\\"(.*)\\\"");
-                Matcher matcher = pattern.matcher(line);
-                if (matcher.find()) {
-                    String raw = matcher.group(1).trim();
-
-                    if (raw.startsWith("alt=")) {
-                       // String locatorValue = raw.substring(4).trim().replace("\"", "");
-                        String locatorValue = raw.toString();
-                      //  String locatorValue = raw.substring("alt=".length()).replaceAll("^\"|\"$", "").trim();
-                        steps.add(new StepDto("click", "alt", locatorValue, ""));
-                    } else {
-                        steps.add(new StepDto("click", "id", raw, ""));
-                    }
-                }
+                steps.add(new StepDto("click", locatorType, locatorValue, ""));
             }
         }
 
-        testCase.setFeatureName("Auto-parsed test case");
-        testCase.setEventListener(""); // Optional: parse this if needed
+        if (testCase.getFeatureName() == null || testCase.getFeatureName().isEmpty()) {
+            testCase.setFeatureName("Auto-parsed test case");
+        }
+        if (testCase.getEventListener() == null) {
+            testCase.setEventListener("");
+        }
+
         testCase.setSteps(steps);
         return testCase;
     }
