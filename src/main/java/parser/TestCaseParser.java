@@ -85,6 +85,16 @@ public class TestCaseParser {
                 continue;
             }
 
+            // Gherkin-style: press "KEY" key in "field"
+            Matcher pressMatcher = Pattern.compile("keypress\\s+\"(.*?)\"\\s+key\\s+in\\s+\"(.*?)\"").matcher(line);
+            if (pressMatcher.find()) {
+                String key = pressMatcher.group(1).trim(); // e.g. ENTER
+                String field = pressMatcher.group(2).trim(); // e.g. search
+                steps.add(new StepDto("keypress", "id", field, key));
+                continue;
+            }
+
+
             // Gherkin-style: enter "value" into "field"
             Matcher enterMatcher = Pattern.compile("enter\\s+\"(.*?)\"\\s+into\\s+\"(.*?)\"").matcher(line);
             if (enterMatcher.find()) {
@@ -106,6 +116,8 @@ public class TestCaseParser {
 
                 steps.add(new StepDto("click", locatorType, locatorValue, ""));
             }
+
+
         }
 
         if (testCase.getFeatureName() == null || testCase.getFeatureName().isEmpty()) {

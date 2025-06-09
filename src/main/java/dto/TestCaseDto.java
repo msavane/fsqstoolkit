@@ -1,5 +1,7 @@
 package dto;
 
+import org.openqa.selenium.Keys;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -85,6 +87,9 @@ public class TestCaseDto {
                     break;
                 case "select":
                     lines.add(String.format("select \"%s\" from \"%s\"", value, property));
+                    break;
+                case "keypress":
+                    lines.add(String.format("keypress \"%s\" key in \"%s\"", value, property));
                     break;
                 default:
                     lines.add(String.format("# Unknown action \"%s\" for \"%s\"", action, property));

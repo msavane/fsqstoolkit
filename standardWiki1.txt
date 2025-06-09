@@ -1,0 +1,6 @@
+Feature: search wiki 1
+Target URL: https://en.wikipedia.org/wiki/Main_Page
+Event Trigger: 
+
+Action: type, Locator Type: name, Locator Value: search, Value: mansa musa
+Action: keypress, Locator Type: name, Locator Value: search, Value: ENTER

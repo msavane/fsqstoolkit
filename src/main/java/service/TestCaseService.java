@@ -1,6 +1,7 @@
 package service;
 
 import dto.StepDto;
+import util.ElementFinder;
 import dto.TestCaseDto;
 import org.openqa.selenium.By;
 import org.openqa.selenium.Keys;
@@ -31,7 +32,8 @@ public class TestCaseService {
                 String value = step.getValue();
 
                 try {
-                    WebElement element = wait.until(ExpectedConditions.elementToBeClickable(resolveLocator(locatorType, locatorValue)));
+                    //WebElement element = wait.until(ExpectedConditions.elementToBeClickable(resolveLocator(locatorType, locatorValue)));
+                    WebElement element = ElementFinder.findSmart(driver, step.getValue()); // Assuming your helper handles this
 
                     switch (action) {
                         case "type":
@@ -84,28 +86,34 @@ public class TestCaseService {
                     if (parts.length == 2) {
                         String value = parts[0].trim().replace("\"", "");
                         String field = parts[1].trim().replace("\"", "");
-                        WebElement element = wait.until(ExpectedConditions.presenceOfElementLocated(By.name(field)));
+                        WebElement element = ElementFinder.findSmart(driver, field);
+
                         element.clear();
                         element.sendKeys(value);
                     }
 
-                } else if (step.startsWith("click")) {
-                    String target = step.replace("click", "").replace("button", "").trim().replace("\"", "");
-                    WebElement button;
+                } else if (step.startsWith("keypress")) {
+                    // Example step: keypress "ENTER" key in "search"
+                    String[] parts = step.replace("keypress", "").replace("key", "").trim().split(" in ");
+                    if (parts.length == 2) {
+                        String keyName = parts[0].trim().replace("\"", "").toUpperCase(); // ENTER
+                        String field = parts[1].trim().replace("\"", "");
 
-                    if (target.equalsIgnoreCase("submit")) {
-                        button = wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("button[type='submit']")));
-                    } else if (target.toLowerCase().startsWith("alt=")) {
-                        String altText = target.substring(4).trim().replace("\"", "");
-                        button = wait.until(ExpectedConditions.elementToBeClickable(By.cssSelector("img[alt='" + altText + "']")));
-                    } else if (target.toLowerCase().startsWith("xpath=")) {
-                        String xpath = target.substring(6).trim();
-                        button = wait.until(ExpectedConditions.elementToBeClickable(By.xpath(xpath)));
+                        WebElement element = ElementFinder.findSmart(driver, field);
+
+                        Keys key = getKeyFromString(keyName);
+                        if (key != null) {
+                            element.sendKeys(key);
+                        } else {
+                            System.out.printf("⚠️ Unknown key '%s'%n", keyName);
+                        }
                     } else {
-                        button = wait.until(ExpectedConditions.elementToBeClickable(By.name(target)));
+                        System.out.println("⚠️ Invalid keypress step format");
                     }
 
-                    button.click();
+
+            } else if (step.startsWith("click")) {
+                    // your existing click logic here...
 
                 } else if (step.startsWith("should see")) {
                     String expected = step.replace("should see", "").trim().replace("\"", "");
@@ -122,6 +130,7 @@ public class TestCaseService {
         }
     }
 
+
     public void printTestCaseSummary(TestCaseDto testCase) {
         System.out.println("\n======= TEST CASE SUMMARY =======");
         System.out.printf("🧪 Feature:         %s%n", testCase.getFeatureName());
@@ -131,7 +140,8 @@ public class TestCaseService {
         List<StepDto> steps = testCase.getSteps();
         int i = 1;
         for (StepDto step : steps) {
-            System.out.printf("  %d. [%s] using [%s=%s] => %s%n", i++, step.getAction(), step.getProperty(), step.getProperty(), step.getValue());
+            //do i call the locator type elementfinder here ?
+            System.out.printf("  %d. [%s] using [%s=%s] => %s%n", i++, step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue());
         }
 
         System.out.printf("%n🎯 Event Trigger: %s%n", testCase.getEventListener());
@@ -150,7 +160,7 @@ public class TestCaseService {
                 writer.write("Event Trigger: " + testCase.getEventListener() + "\n\n");
                 for (StepDto step : testCase.getSteps()) {
                     writer.write(String.format("Action: %s, Locator Type: %s, Locator Value: %s, Value: %s%n",
-                            step.getAction(), step.getProperty(), step.getProperty(), step.getValue()));
+                            step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue()));
                 }
             }
             System.out.printf("✅ Test case saved to file: %s%n", filename);
