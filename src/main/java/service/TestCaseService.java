@@ -8,7 +8,6 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
 import java.io.FileWriter;
@@ -36,12 +35,21 @@ public class TestCaseService {
                     //WebElement element = ElementFinder.findSmart(driver, step.getValue()); // Assuming your helper handles this
                     WebElement element = ElementFinder.findSmart(driver, step.getProperty());
 
+                    /*By locator = resolveLocator(locatorType, locatorValue);
+                    WebElement element = wait.until(ExpectedConditions.elementToBeClickable(locator));*/
+
+
                     switch (action) {
                         case "type":
                             element.clear();
                             element.sendKeys(value);
                             break;
                         case "click":
+                            element.click();
+                            break;
+                        case "alt":
+                            element = driver.findElement(By.cssSelector("[alt='" + locatorValue + "']"));
+                            System.out.printf("locxator val is : " + locatorValue);
                             element.click();
                             break;
                         case "keypress":
@@ -77,7 +85,6 @@ public class TestCaseService {
     public void runGherkinStyleTest(TestCaseDto testCase) {
         WebDriver driver = new ChromeDriver();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-
         try {
             for (String step : testCase.getStepsAsText()) {
                 if (step.startsWith("navigate to")) {
@@ -115,8 +122,12 @@ public class TestCaseService {
                     }
 
 
-            } else if (step.startsWith("click")) {
+                } else if (step.startsWith("click")) {
                     // your existing click logic here...
+                    String field = step.replace("click", "").replace("button", "").trim().replace("\"", "");
+                    WebElement button = ElementFinder.findSmart(driver, field);
+                    // button = resolveLocator(getlocatortype, getproperty);
+                    button.click();
 
                 } else if (step.startsWith("should see")) {
                     String expected = step.replace("should see", "").trim().replace("\"", "");
@@ -143,7 +154,6 @@ public class TestCaseService {
         List<StepDto> steps = testCase.getSteps();
         int i = 1;
         for (StepDto step : steps) {
-            //do i call the locator type elementfinder here ?
             System.out.printf("  %d. [%s] using [%s=%s] => %s%n", i++, step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue());
         }
 
@@ -190,8 +200,12 @@ public class TestCaseService {
                 return By.cssSelector(property);
             case "xpath":
                 return By.xpath(property);
+           /* case "alt":
+                return By.cssSelector("img[alt='" + property + "']");*/
             case "alt":
-                return By.cssSelector("img[alt='" + property + "']");
+                // XPath for img with exact alt text match
+                return By.xpath("//img[@alt='" + property + "']");
+
             case "tag":
                 return By.tagName(property);
             default:

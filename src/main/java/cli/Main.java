@@ -13,7 +13,7 @@ public class Main {
         try {
             TestCaseParser parser = new TestCaseParser();
             TestCaseDto testCase = parser.loadFromScriptFile("standardWiki2.txt");//works with 2
-            //TestCaseDto testCase = parser.loadFromScriptFile("standardWiki1.txt");// works with 2
+            //TestCaseDto testCase = parser.loadFromScriptFile("playmovie1.txt");// works with 2
 
 
             new ConsoleRunner().run(testCase); // run preloaded test

@@ -11,23 +11,29 @@ import java.util.List;
 public class ElementFinder {
 
     public static WebElement findSmart(WebDriver driver, String locatorValue) {
-        List<By> strategies = List.of(
-                By.id(locatorValue),
-                By.name(locatorValue),
-                By.cssSelector(locatorValue),
-                By.xpath(locatorValue),
-                By.className(locatorValue)
-        );
+        List<By> strategies = new java.util.ArrayList<>();
+
+        if (locatorValue.startsWith("img=")) {
+            String altText = locatorValue.substring(4);
+            strategies.add(By.xpath("//img[@alt=\"" + altText + "\"]"));
+        } else {
+            strategies.addAll(List.of(
+                    By.id(locatorValue),
+                    By.name(locatorValue),
+                    By.cssSelector(locatorValue),
+                    By.xpath(locatorValue),
+                    By.className(locatorValue)
+            ));
+        }
 
         for (By by : strategies) {
             try {
                 WebElement element = driver.findElement(by);
-                if (element != null) {
-                    return element;
-                }
+                if (element != null) return element;
             } catch (NoSuchElementException ignored) {}
         }
 
         throw new NoSuchElementException("❌ Element not found with any strategy for: " + locatorValue);
     }
+
 }
