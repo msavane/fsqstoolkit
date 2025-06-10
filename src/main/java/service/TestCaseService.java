@@ -33,7 +33,8 @@ public class TestCaseService {
 
                 try {
                     //WebElement element = wait.until(ExpectedConditions.elementToBeClickable(resolveLocator(locatorType, locatorValue)));
-                    WebElement element = ElementFinder.findSmart(driver, step.getValue()); // Assuming your helper handles this
+                    //WebElement element = ElementFinder.findSmart(driver, step.getValue()); // Assuming your helper handles this
+                    WebElement element = ElementFinder.findSmart(driver, step.getProperty());
 
                     switch (action) {
                         case "type":
@@ -44,8 +45,10 @@ public class TestCaseService {
                             element.click();
                             break;
                         case "keypress":
-                            Keys key = getKeyFromString(value);
+                            element = ElementFinder.findSmart(driver, step.getProperty()); // 🔥 FIX: use locator (like "search")
+                            Keys key = getKeyFromString(value); // value is something like "ENTER"
                             if (key != null) {
+                                System.out.printf("⌨️ Pressing key '%s' in element '%s'%n", value, step.getProperty());
                                 element.sendKeys(key);
                             } else {
                                 System.out.printf("⚠️ Unknown key '%s'%n", value);
