@@ -13,7 +13,7 @@ public class ElementFinder {
     public static WebElement findSmart(WebDriver driver, String locatorValue) {
         List<By> strategies = new java.util.ArrayList<>();
 
-        if (locatorValue.startsWith("img=")) {
+        if (locatorValue.startsWith("alt=")) {
             String altText = locatorValue.substring(4);
             strategies.add(By.xpath("//img[@alt=\"" + altText + "\"]"));
         } else {

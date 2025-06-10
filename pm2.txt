@@ -1,0 +1,5 @@
+navigate to http://localhost:8080/
+enter "test@email.com" into "email"
+enter "123" into "password"
+click "submit"
+click "alt=Au nom du Christ"

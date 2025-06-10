@@ -1,4 +1,4 @@
-Feature: log on play movie
+Feature: log on play movie test
 Target URL: http://localhost:8080/
 Event Trigger: 
 
