@@ -67,6 +67,18 @@ public class TestCaseDto {
     }
 
     /**
+     * Extracts all locator types used in the test case steps.
+     */
+    public List<String> getAllLocatorTypes() {
+        List<String> locatorTypes = new ArrayList<>();
+        for (StepDto step : steps) {
+            locatorTypes.add(step.getLocatorType());
+        }
+        return locatorTypes;
+    }
+
+
+    /**
      * Converts the test case steps to Gherkin-style readable text.
      */
     public List<String> getStepsAsText() {
@@ -77,6 +89,8 @@ public class TestCaseDto {
             String action = step.getAction().toLowerCase();
             String property = step.getProperty();
             String value = step.getValue();
+            String locatorType = step.getLocatorType(); // ✅ Added
+
 
             switch (action) {
                 case "type":
@@ -92,7 +106,7 @@ public class TestCaseDto {
                     lines.add(String.format("keypress \"%s\" key in \"%s\"", value, property));
                     break;
                 case "assert":
-                    lines.add(String.format("assert \"%s\"", property));
+                    lines.add(String.format("assert [%s=%s]", locatorType, property));
                     break;
                 default:
                     lines.add(String.format("# Unknown action \"%s\" for \"%s\"", action, property));

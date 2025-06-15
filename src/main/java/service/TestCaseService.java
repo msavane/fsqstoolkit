@@ -4,6 +4,7 @@ import dto.StepDto;
 import dto.TestCaseDto;
 import org.openqa.selenium.*;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 import util.ElementFinder;
 
@@ -11,6 +12,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.Duration;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -72,10 +74,11 @@ public class TestCaseService {
     public void runGherkinStyleTest(TestCaseDto testCase) {
         WebDriver driver = new ChromeDriver();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        List<String> locatorType = testCase.getAllLocatorTypes();
 
         try {
+            int i = 0;
             for (String step : testCase.getStepsAsText()) {
-                String locatorType = "";
 
                 if (step.startsWith("navigate to")) {
                     driver.get(step.replace("navigate to", "").trim());
@@ -84,20 +87,25 @@ public class TestCaseService {
                     String[] parts = step.replace("enter", "").trim().split(" into ");
                     String value = parts[0].replace("\"", "").trim();
                     String field = parts[1].replace("\"", "").trim();
-                    ElementFinder.findSmart(driver, field, "id").sendKeys(value);
+                    ElementFinder.findSmart(driver, field, locatorType.get(i)).sendKeys(value);
 
                 } else if (step.startsWith("click")) {
                     String target = step.replace("click", "").replace("button", "").trim().replace("\"", "");
-                    ElementFinder.findSmart(driver, target, locatorType).click();
+                    ElementFinder.findSmart(driver, target, locatorType.get(i)).click();
 
                 } else if (step.startsWith("keypress")) {
                     String[] parts = step.replace("keypress", "").replace("key", "").trim().split(" in ");
                     String key = parts[0].replace("\"", "").trim();
                     String field = parts[1].replace("\"", "").trim();
                     Keys seleniumKey = getKeyFromString(key);
-                    if (seleniumKey != null) ElementFinder.findSmart(driver, field, locatorType).sendKeys(seleniumKey);
+                    if (seleniumKey != null) ElementFinder.findSmart(driver, field, locatorType.get(i)).sendKeys(seleniumKey);
 
                 } else if (step.startsWith("assert")) {
+                   // System.out.println(step);
+                    String raw = step;
+                    String val = raw.replace("assert","");
+                   // System.out.println(val);
+                    ElementFinder.findSmart(driver,val,locatorType.get(i));
                     assertGenericPresence(driver, step);
                 }
             }
@@ -110,7 +118,29 @@ public class TestCaseService {
         }
     }
 
-    private void assertGenericPresence(WebDriver driver, String stepOrValue) {
+    public void assertGenericPresence(WebDriver driver, String expectedLocatorValue) {
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
+
+        // If the expectedLocatorValue includes title=, parse it
+        String titleText = null;
+        if (expectedLocatorValue.contains("title=")) {
+            int index = expectedLocatorValue.indexOf("title=") + 6;
+            titleText = expectedLocatorValue.substring(index).trim();
+            if (titleText.endsWith("]")) {
+                titleText = titleText.substring(0, titleText.length() - 1).trim();
+            }
+        } else {
+            titleText = expectedLocatorValue;
+        }
+
+        By locator = By.xpath("//*[@title='" + titleText + "']");
+
+        wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
+        System.out.println("✅ Assertion passed: " + titleText);
+    }
+
+
+    /*private void assertGenericPresence(WebDriver driver, String stepOrValue) {
         String expected;
 
         System.out.printf("🧐 Looking for element with title or text='%s'%n", stepOrValue);
@@ -145,7 +175,7 @@ public class TestCaseService {
         }
 
         System.out.println("✅ Assertion passed: " + expected);
-    }
+    }*/
 
     private String extractValue(String input, String key) {
         Pattern pattern = Pattern.compile("\\[" + key + "=([^\\]]+)]");
