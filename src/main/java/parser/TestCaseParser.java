@@ -70,6 +70,7 @@ public class TestCaseParser {
                 continue;
             }
 
+
             // Structured Action line
             Pattern actionPattern = Pattern.compile(
                     "Action:\\s*(\\w+),\\s*Locator Type:\\s*([^,]+),\\s*Locator Value:\\s*([^,]+),\\s*Value:\\s*(.*)"
@@ -95,12 +96,32 @@ public class TestCaseParser {
             }
 
 
+
             // Gherkin-style: enter "value" into "field"
             Matcher enterMatcher = Pattern.compile("enter\\s+\"(.*?)\"\\s+into\\s+\"(.*?)\"").matcher(line);
             if (enterMatcher.find()) {
                 steps.add(new StepDto("type", "id", enterMatcher.group(2).trim(), enterMatcher.group(1).trim()));
                 continue;
             }
+
+            // Gherkin-style: should see "text" or should see "type=value"
+            Matcher assertMatcher = Pattern.compile("assert\\s+\"(.*?)\"").matcher(line);
+            if (assertMatcher.find()) {
+                String raw = assertMatcher.group(1).trim();
+                String locatorType = "id";
+                String locatorValue = raw;
+
+                // Support for format like "title=Some Title"
+                if (raw.contains("=")) {
+                    String[] parts = raw.split("=", 2);
+                    locatorType = parts[0].trim();
+                    locatorValue = parts[1].trim();
+                }
+
+                steps.add(new StepDto("assert", locatorType, locatorValue, ""));
+                continue;
+            }
+
 
             // Gherkin-style: click "id" or click "alt=..."
             Matcher clickMatcher = Pattern.compile("click\\s+\"(.*?)\"").matcher(line);

@@ -91,6 +91,9 @@ public class TestCaseDto {
                 case "keypress":
                     lines.add(String.format("keypress \"%s\" key in \"%s\"", value, property));
                     break;
+                case "assert":
+                    lines.add(String.format("assert \"%s\"", property));
+                    break;
                 default:
                     lines.add(String.format("# Unknown action \"%s\" for \"%s\"", action, property));
             }

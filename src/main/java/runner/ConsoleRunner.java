@@ -87,5 +87,4 @@ private String promptYesNo(Scanner scanner, String message) {
         System.out.println(message);
         return scanner.nextLine().trim();
     }
-
 }
