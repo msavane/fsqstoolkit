@@ -5,4 +5,4 @@ Event Trigger:
 Action: type, Locator Type: id, Locator Value: email, Value: test@email.com
 Action: type, Locator Type: id, Locator Value: password, Value: 123
 Action: click, Locator Type: id, Locator Value: submit, Value: 
-Action: click, Locator Type: xpath, Locator Value: alt=Au nom du Christ, Value: 
+Action: click, Locator Type: xpath, Locator Value: alt=Marabout Chéri, Value: 

@@ -25,8 +25,8 @@ public class Main {
                 try {
                     TestCaseParser parser = new TestCaseParser();
                     //TestCaseDto testCase = parser.loadFromScriptFile("assertmovie2.txt");
-                    //TestCaseDto testCase = parser.loadFromScriptFile("getPostTest.txt");
-                    TestCaseDto testCase = parser.loadFromScriptFile("pm1.txt");
+                    TestCaseDto testCase = parser.loadFromScriptFile("getPostTest.txt");
+                    //TestCaseDto testCase = parser.loadFromScriptFile("pm1.txt");
                     new ConsoleRunner().run(testCase);
                 } catch (IOException e) {
                     System.err.println("❌ Failed to load test case: " + e.getMessage());
@@ -49,7 +49,8 @@ public class Main {
             case "3":
                 try {
                     TestCaseParser parser = new TestCaseParser();
-                    TestCaseDto apiTest = parser.loadFromScriptFile("apitestcase.txt");
+                    //TestCaseDto apiTest = parser.loadFromScriptFile("apitestcase.txt");
+                    TestCaseDto apiTest = parser.loadFromScriptFile("getPostTest.txt");
                     new ConsoleRunner().run(apiTest); // Reuse existing runner if compatible
                 } catch (IOException e) {
                     System.err.println("❌ Failed to load API test case: " + e.getMessage());

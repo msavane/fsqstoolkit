@@ -3,79 +3,89 @@ package parser;
 import dto.StepDto;
 import dto.TestCaseDto;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.*;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TestCaseParser {
 
-    public TestCaseDto loadFromScriptFile(String filePath) throws IOException {
-        List<String> lines = Files.readAllLines(Paths.get(filePath));
+    public TestCaseDto loadFromScriptFile(String fileName) throws IOException {
+        // Load file from resources/testcases/ using classloader as InputStream
+        InputStream inputStream = Thread.currentThread()
+                .getContextClassLoader()
+                .getResourceAsStream("testcases/" + fileName);
+
+        if (inputStream == null) {
+            throw new IOException("❌ File not found in resources/testcases/: " + fileName);
+        }
+
+        BufferedReader reader = new BufferedReader(new InputStreamReader(inputStream));
+        List<String> lines = new ArrayList<>();
+        String line;
+
+        while ((line = reader.readLine()) != null) {
+            lines.add(line.trim());
+        }
+
         TestCaseDto testCase = new TestCaseDto();
         List<StepDto> steps = new ArrayList<>();
 
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) continue;
+        for (String ln : lines) {
+            if (ln.isEmpty()) continue;
 
-            // Toolkit-style headers
-            if (line.startsWith("🧪 Feature:")) {
-                testCase.setFeatureName(line.substring("🧪 Feature:".length()).trim());
+            if (ln.startsWith("🧪 Feature:")) {
+                testCase.setFeatureName(ln.substring("🧪 Feature:".length()).trim());
                 continue;
             }
 
-            if (line.startsWith("🌐 Target URL:")) {
-                testCase.setTargetUrl(line.substring("🌐 Target URL:".length()).trim());
+            if (ln.startsWith("🌐 Target URL:")) {
+                testCase.setTargetUrl(ln.substring("🌐 Target URL:".length()).trim());
                 continue;
             }
 
-            if (line.startsWith("🎯 Event Trigger:")) {
-                testCase.setEventListener(line.substring("🎯 Event Trigger:".length()).trim());
+            if (ln.startsWith("🎯 Event Trigger:")) {
+                testCase.setEventListener(ln.substring("🎯 Event Trigger:".length()).trim());
                 continue;
             }
 
-            // Toolkit-style step format
-            Matcher summaryStep = Pattern.compile("\\d+\\. \\[(.*?)\\] using \\[(.*?)=(.*?)\\] => ?(.*)").matcher(line);
+            Matcher summaryStep = Pattern.compile("\\d+\\. \\[(.*?)\\] using \\[(.*?)=(.*?)\\] => ?(.*)").matcher(ln);
             if (summaryStep.find()) {
-                String action = summaryStep.group(1).trim();
-                String locatorType = summaryStep.group(2).trim();
-                String locatorValue = summaryStep.group(3).trim();
-                String value = summaryStep.group(4).trim();
-                steps.add(new StepDto(action, locatorType, locatorValue, value));
+                steps.add(new StepDto(
+                        summaryStep.group(1).trim(),
+                        summaryStep.group(2).trim(),
+                        summaryStep.group(3).trim(),
+                        summaryStep.group(4).trim()
+                ));
                 continue;
             }
 
-            // Script-style: Feature, Target URL, Event Trigger
-            if (line.toLowerCase().startsWith("feature:")) {
-                testCase.setFeatureName(line.substring("feature:".length()).trim());
+            if (ln.toLowerCase().startsWith("feature:")) {
+                testCase.setFeatureName(ln.substring("feature:".length()).trim());
                 continue;
             }
 
-            if (line.toLowerCase().startsWith("target url:")) {
-                testCase.setTargetUrl(line.substring("target url:".length()).trim());
+            if (ln.toLowerCase().startsWith("target url:")) {
+                testCase.setTargetUrl(ln.substring("target url:".length()).trim());
                 continue;
             }
 
-            if (line.toLowerCase().startsWith("event trigger:")) {
-                testCase.setEventListener(line.substring("event trigger:".length()).trim());
+            if (ln.toLowerCase().startsWith("event trigger:")) {
+                testCase.setEventListener(ln.substring("event trigger:".length()).trim());
                 continue;
             }
 
-            // Gherkin-style: navigate to ...
-            if (line.toLowerCase().startsWith("navigate to ")) {
-                testCase.setTargetUrl(line.substring("navigate to ".length()).trim());
+            if (ln.toLowerCase().startsWith("navigate to ")) {
+                testCase.setTargetUrl(ln.substring("navigate to ".length()).trim());
                 continue;
             }
 
-
-            // Structured Action line
-            Pattern actionPattern = Pattern.compile(
+            Matcher actionMatcher = Pattern.compile(
                     "Action:\\s*(\\w+),\\s*Locator Type:\\s*([^,]+),\\s*Locator Value:\\s*([^,]+),\\s*Value:\\s*(.*)"
-            );
-            Matcher actionMatcher = actionPattern.matcher(line);
+            ).matcher(ln);
             if (actionMatcher.find()) {
                 steps.add(new StepDto(
                         actionMatcher.group(1).trim(),
@@ -86,32 +96,24 @@ public class TestCaseParser {
                 continue;
             }
 
-            // Gherkin-style: press "KEY" key in "field"
-            Matcher pressMatcher = Pattern.compile("keypress\\s+\"(.*?)\"\\s+key\\s+in\\s+\"(.*?)\"").matcher(line);
+            Matcher pressMatcher = Pattern.compile("keypress\\s+\"(.*?)\"\\s+key\\s+in\\s+\"(.*?)\"").matcher(ln);
             if (pressMatcher.find()) {
-                String key = pressMatcher.group(1).trim(); // e.g. ENTER
-                String field = pressMatcher.group(2).trim(); // e.g. search
-                steps.add(new StepDto("keypress", "id", field, key));
+                steps.add(new StepDto("keypress", "id", pressMatcher.group(2).trim(), pressMatcher.group(1).trim()));
                 continue;
             }
 
-
-
-            // Gherkin-style: enter "value" into "field"
-            Matcher enterMatcher = Pattern.compile("enter\\s+\"(.*?)\"\\s+into\\s+\"(.*?)\"").matcher(line);
+            Matcher enterMatcher = Pattern.compile("enter\\s+\"(.*?)\"\\s+into\\s+\"(.*?)\"").matcher(ln);
             if (enterMatcher.find()) {
                 steps.add(new StepDto("type", "id", enterMatcher.group(2).trim(), enterMatcher.group(1).trim()));
                 continue;
             }
 
-            // Gherkin-style: should see "text" or should see "type=value"
-            Matcher assertMatcher = Pattern.compile("assert\\s+\"(.*?)\"").matcher(line);
+            Matcher assertMatcher = Pattern.compile("assert\\s+\"(.*?)\"").matcher(ln);
             if (assertMatcher.find()) {
                 String raw = assertMatcher.group(1).trim();
                 String locatorType = "id";
                 String locatorValue = raw;
 
-                // Support for format like "title=Some Title"
                 if (raw.contains("=")) {
                     String[] parts = raw.split("=", 2);
                     locatorType = parts[0].trim();
@@ -122,23 +124,14 @@ public class TestCaseParser {
                 continue;
             }
 
-
-            // Gherkin-style: click "id" or click "alt=..."
-            Matcher clickMatcher = Pattern.compile("click\\s+\"(.*?)\"").matcher(line);
+            Matcher clickMatcher = Pattern.compile("click\\s+\"(.*?)\"").matcher(ln);
             if (clickMatcher.find()) {
                 String raw = clickMatcher.group(1).trim();
-                String locatorType = "id";
-                String locatorValue = raw;
-
-                if (raw.startsWith("alt=")) {
-                    locatorType = "alt";
-                    //locatorValue = raw.substring("alt=".length()).trim();
-                }
+                String locatorType = raw.startsWith("alt=") ? "alt" : "id";
+                String locatorValue = raw.startsWith("alt=") ? raw.substring(4).trim() : raw;
 
                 steps.add(new StepDto("click", locatorType, locatorValue, ""));
             }
-
-
         }
 
         if (testCase.getFeatureName() == null || testCase.getFeatureName().isEmpty()) {

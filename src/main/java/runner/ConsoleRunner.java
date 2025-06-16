@@ -38,7 +38,13 @@ public class ConsoleRunner {
 
                         String styleChoice = promptChoice(scanner, "Choose [1/2]:", "1", "2");
                         String extension = styleChoice.equals("2") ? ".feature" : ".txt";
-                        List<Path> availableFiles = FileDiscoveryUtil.discoverTestFiles("src/main/java/testcases", extension);
+
+                        // ✅ Correct path to match your file location
+                        String folderPath = "src/main/resources/testcases";
+                        //List<Path> availableFiles = FileDiscoveryUtil.discoverTestFiles(folderPath, extension);
+                        String resourceFolder = "testcases";
+                        List<Path> availableFiles = FileDiscoveryUtil.discoverTestFiles(resourceFolder, extension);
+
 
                         if (availableFiles.isEmpty()) {
                             System.out.println("⚠ No test cases found for that type.");
@@ -54,7 +60,7 @@ public class ConsoleRunner {
                         Path selected = availableFiles.get(choice - 1);
 
                         TestCaseParser parser = new TestCaseParser();
-                        testCase = parser.loadFromScriptFile(selected.toString());
+                        testCase = parser.loadFromScriptFile(selected.getFileName().toString());
 
                     } catch (IOException | NumberFormatException e) {
                         System.err.println("❌ Failed to load test case: " + e.getMessage());
@@ -70,18 +76,13 @@ public class ConsoleRunner {
                     String typeChoice = promptChoice(scanner, "Select [1/2/3]:", "1", "2", "3");
 
                     switch (typeChoice) {
-                        case "1":
-                            testCase = builder.buildFromInput();
-                            break;
-                        case "2":
-                            testCase = builder.buildGherkinFromInput();
-                            break;
-                        case "3":
-                            testCase = builder.buildApiTestFromInput();
-                            break;
-                        default:
+                        case "1" -> testCase = builder.buildFromInput();
+                        case "2" -> testCase = builder.buildGherkinFromInput();
+                        case "3" -> testCase = builder.buildApiTestFromInput();
+                        default -> {
                             System.out.println("❌ Invalid choice.");
                             continue;
+                        }
                     }
                 }
             }
@@ -93,15 +94,9 @@ public class ConsoleRunner {
                 String style = promptChoice(scanner, "Choose execution style: (1) Standard  (2) Gherkin  (3) REST", "1", "2", "3");
 
                 switch (style) {
-                    case "1":
-                        service.runTestCase(testCase);
-                        break;
-                    case "2":
-                        service.runGherkinStyleTest(testCase);
-                        break;
-                    case "3":
-                        service.runRestTestCase(testCase);
-                        break;
+                    case "1" -> service.runTestCase(testCase);
+                    case "2" -> service.runGherkinStyleTest(testCase);
+                    case "3" -> service.runRestTestCase(testCase);
                 }
 
                 System.out.println("✅ Test run complete.");
