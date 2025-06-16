@@ -1,0 +1,6 @@
+Feature: test endpoint
+Target URL: API_TEST
+Event Trigger: 
+
+Action: GET, Locator Type: , Locator Value: https://jsonplaceholder.typicode.com/posts/1, Value: 
+Action: ASSERT_BODY, Locator Type: , Locator Value: , Value: userId

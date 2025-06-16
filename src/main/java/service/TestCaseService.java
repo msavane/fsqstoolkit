@@ -10,15 +10,34 @@ import util.ElementFinder;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TestCaseService {
 
     public void runTestCase(TestCaseDto testCase) {
+        if (testCase == null || testCase.getSteps() == null || testCase.getSteps().isEmpty()) {
+            System.out.println("❌ No test case provided or it contains no steps.");
+            return;
+        }
+
+        boolean isApiTest = testCase.getSteps().stream().anyMatch(step ->
+                step.getAction().equalsIgnoreCase("GET") ||
+                        step.getAction().equalsIgnoreCase("POST") ||
+                        step.getAction().equalsIgnoreCase("ASSERT_BODY")
+        );
+
+        if (isApiTest) {
+            runRestTestCase(testCase);
+            return;
+        }
+
         WebDriver driver = new ChromeDriver();
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 
@@ -67,7 +86,7 @@ public class TestCaseService {
         } catch (Exception e) {
             System.out.println("❌ Test failed: " + e.getMessage());
         } finally {
-            // driver.quit(); // optionally close browser after test
+            // driver.quit();
         }
     }
 
@@ -101,11 +120,9 @@ public class TestCaseService {
                     if (seleniumKey != null) ElementFinder.findSmart(driver, field, locatorType.get(i)).sendKeys(seleniumKey);
 
                 } else if (step.startsWith("assert")) {
-                   // System.out.println(step);
                     String raw = step;
-                    String val = raw.replace("assert","");
-                   // System.out.println(val);
-                    ElementFinder.findSmart(driver,val,locatorType.get(i));
+                    String val = raw.replace("assert", "").trim();
+                    ElementFinder.findSmart(driver, val, locatorType.get(i));
                     assertGenericPresence(driver, step);
                 }
             }
@@ -118,10 +135,57 @@ public class TestCaseService {
         }
     }
 
+    public void runRestTestCase(TestCaseDto testCase) {
+        HttpClient client = HttpClient.newHttpClient();
+        String lastResponseBody = "";
+
+        try {
+            for (StepDto step : testCase.getSteps()) {
+                switch (step.getAction().toUpperCase()) {
+                    case "GET":
+                        HttpRequest getRequest = HttpRequest.newBuilder()
+                                .uri(URI.create(step.getProperty()))
+                                .GET()
+                                .build();
+                        HttpResponse<String> getResponse = client.send(getRequest, HttpResponse.BodyHandlers.ofString());
+                        lastResponseBody = getResponse.body();
+                        System.out.println("✅ GET Response: " + lastResponseBody);
+                        break;
+
+                    case "POST":
+                        HttpRequest postRequest = HttpRequest.newBuilder()
+                                .uri(URI.create(step.getProperty()))
+                                .header("Content-Type", "application/json")
+                                .POST(HttpRequest.BodyPublishers.ofString(step.getValue()))
+                                .build();
+                        HttpResponse<String> postResponse = client.send(postRequest, HttpResponse.BodyHandlers.ofString());
+                        lastResponseBody = postResponse.body();
+                        System.out.println("✅ POST Response: " + lastResponseBody);
+                        break;
+
+                    case "ASSERT_BODY":
+                        if (!lastResponseBody.contains(step.getValue())) {
+                            throw new AssertionError("❌ Body does not contain expected text: " + step.getValue());
+                        } else {
+                            System.out.println("✅ Body contains: " + step.getValue());
+                        }
+                        break;
+
+                    default:
+                        System.out.println("⚠️ Unknown API action: " + step.getAction());
+                }
+            }
+
+            System.out.println("✅ REST-style test ran successfully.");
+
+        } catch (Exception e) {
+            System.out.println("❌ REST test failed: " + e.getMessage());
+        }
+    }
+
     public void assertGenericPresence(WebDriver driver, String expectedLocatorValue) {
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
 
-        // If the expectedLocatorValue includes title=, parse it
         String titleText = null;
         if (expectedLocatorValue.contains("title=")) {
             int index = expectedLocatorValue.indexOf("title=") + 6;
@@ -139,50 +203,6 @@ public class TestCaseService {
         System.out.println("✅ Assertion passed: " + titleText);
     }
 
-
-    /*private void assertGenericPresence(WebDriver driver, String stepOrValue) {
-        String expected;
-
-        System.out.printf("🧐 Looking for element with title or text='%s'%n", stepOrValue);
-
-        if ((expected = extractValue(stepOrValue, "title")) != null) {
-            String actualTitle = driver.getTitle();
-            System.out.printf("🧐 Actual page title: '%s'%n", actualTitle);
-            if (!actualTitle.contains(expected)) {
-                throw new AssertionError("❌ Page title does not contain: " + expected);
-            }
-
-        } else if ((expected = extractValue(stepOrValue, "img")) != null) {
-            List<WebElement> imgs = driver.findElements(By.tagName("img"));
-            String finalExpected = expected;
-            boolean found = imgs.stream().anyMatch(img -> {
-                String src = img.getAttribute("src");
-                return src != null && src.contains(finalExpected);
-            });
-            if (!found) throw new AssertionError("❌ Image not found in src: " + expected);
-
-        } else if ((expected = extractValue(stepOrValue, "footer")) != null) {
-            WebElement footer = driver.findElement(By.tagName("footer"));
-            if (!footer.getText().contains(expected)) {
-                throw new AssertionError("❌ Footer does not contain: " + expected);
-            }
-
-        } else {
-            expected = stepOrValue.replace("assert", "").trim().replace("\"", "");
-            if (!driver.getPageSource().contains(expected)) {
-                throw new AssertionError("❌ Expected text not found in page source: " + expected);
-            }
-        }
-
-        System.out.println("✅ Assertion passed: " + expected);
-    }*/
-
-    private String extractValue(String input, String key) {
-        Pattern pattern = Pattern.compile("\\[" + key + "=([^\\]]+)]");
-        Matcher matcher = pattern.matcher(input);
-        return matcher.find() ? matcher.group(1).trim() : null;
-    }
-
     private Keys getKeyFromString(String keyName) {
         try {
             return Keys.valueOf(keyName.toUpperCase());
@@ -193,17 +213,22 @@ public class TestCaseService {
 
     public void printTestCaseSummary(TestCaseDto testCase) {
         System.out.println("\n======= TEST CASE SUMMARY =======");
-        System.out.printf("🧪 Feature:         %s%n", testCase.getFeatureName());
-        System.out.printf("🌐 Target URL:      %s%n%n", testCase.getTargetUrl());
+
+        System.out.printf("🧪 Feature:         %s%n", safe(testCase.getFeatureName()));
+        System.out.printf("🌐 Target URL:      %s%n%n", safe(testCase.getTargetUrl()));
 
         System.out.println("🔁 Steps:");
         List<StepDto> steps = testCase.getSteps();
         int i = 1;
         for (StepDto step : steps) {
-            System.out.printf("  %d. [%s] using [%s=%s] => %s%n", i++, step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue());
+            System.out.printf("  %d. [%s] using [%s=%s] => %s%n", i++,
+                    safe(step.getAction()),
+                    safe(step.getLocatorType()),
+                    safe(step.getProperty()),
+                    safe(step.getValue()));
         }
 
-        System.out.printf("%n🎯 Event Trigger: %s%n", testCase.getEventListener());
+        System.out.printf("%n🎯 Event Trigger: %s%n", safe(testCase.getEventListener()));
         System.out.println("=================================\n");
     }
 
@@ -214,266 +239,25 @@ public class TestCaseService {
                     writer.write(step + System.lineSeparator());
                 }
             } else {
-                writer.write("Feature: " + testCase.getFeatureName() + "\n");
-                writer.write("Target URL: " + testCase.getTargetUrl() + "\n");
-                writer.write("Event Trigger: " + testCase.getEventListener() + "\n\n");
+                writer.write("Feature: " + safe(testCase.getFeatureName()) + "\n");
+                writer.write("Target URL: " + safe(testCase.getTargetUrl()) + "\n");
+                writer.write("Event Trigger: " + safe(testCase.getEventListener()) + "\n\n");
+
                 for (StepDto step : testCase.getSteps()) {
                     writer.write(String.format("Action: %s, Locator Type: %s, Locator Value: %s, Value: %s%n",
-                            step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue()));
+                            safe(step.getAction()),
+                            safe(step.getLocatorType()),
+                            safe(step.getProperty()),
+                            safe(step.getValue())));
                 }
             }
             System.out.printf("✅ Test case saved to file: %s%n", filename);
         } catch (IOException e) {
             System.out.printf("❌ Failed to save test case to file: %s%n", e.getMessage());
         }
+    }
+
+    private String safe(String input) {
+        return input != null ? input : "";
     }
 }
-
-/*package service;
-
-import dto.StepDto;
-import org.openqa.selenium.support.ui.ExpectedConditions;
-import util.ElementFinder;
-import dto.TestCaseDto;
-import org.openqa.selenium.By;
-import org.openqa.selenium.Keys;
-import org.openqa.selenium.WebDriver;
-import org.openqa.selenium.WebElement;
-import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.support.ui.WebDriverWait;
-
-import java.io.FileWriter;
-import java.io.IOException;
-import java.time.Duration;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-public class TestCaseService {
-
-
-    String action;
-    String locatorType;
-    String locatorValue;
-    String value;
-
-    WebDriver driver = new ChromeDriver();
-    WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-
-    public void runTestCase(TestCaseDto testCase) {
-
-        try {
-            driver.get(testCase.getTargetUrl());
-
-            for (StepDto step : testCase.getSteps()) {
-                 action = step.getAction().toLowerCase();
-                 locatorType = step.getLocatorType();  // ✅ use the correct getter
-                 locatorValue = step.getProperty();    // ✅ property is the locator value
-                 value = step.getValue();
-
-                try {
-
-                    WebElement element = ElementFinder.findSmart(driver, step.getProperty());
-
-
-                    switch (action) {
-                        case "type":
-                            element.clear();
-                            element.sendKeys(value);
-                            break;
-                        case "click":
-                            element.click();
-                            break;
-
-                        case "should_see":
-                            System.out.printf("🧐 Looking for element with title or text='%s'%n", value);
-                            break;
-
-                            List<WebElement> elements = driver.findElements(By.xpath(
-                                    "//*[text()=\"" + locatorValue + "\" or @title=\"" + locatorValue + "\" or @aria-label=\"" + locatorValue + "\" or @alt=\"" + locatorValue + "\"]"
-                            ));
-
-                            boolean found = elements.stream().anyMatch(WebElement::isDisplayed);
-
-                            if (found) {
-                                System.out.println("✅ Element with expected content found and visible.");
-                            } else {
-                                throw new AssertionError("❌ Expected element not found or not visible: " + locatorValue);
-                            }
-                            break;
-
-                        case "keypress":
-                            element = ElementFinder.findSmart(driver, step.getProperty()); // 🔥 FIX: use locator (like "search")
-                            Keys key = getKeyFromString(value); // value is something like "ENTER"
-                            if (key != null) {
-                                System.out.printf("⌨️ Pressing key '%s' in element '%s'%n", value, step.getProperty());
-                                element.sendKeys(key);
-                            } else {
-                                System.out.printf("⚠️ Unknown key '%s'%n", value);
-                            }
-                            break;
-                        case "select":
-                            System.out.println("🔧 Select not implemented.");
-                            break;
-                        default:
-                            System.out.printf("⚠️ Unknown action '%s' on property '%s'%n", action, locatorType);
-                    }
-
-                } catch (Exception e) {
-                    System.out.printf("❌ Failed to interact with property '%s': %s%n", locatorType, e.getMessage());
-                }
-            }
-
-            System.out.println("✅ Test ran successfully.");
-        } catch (Exception e) {
-            System.out.println("❌ Test failed: " + e.getMessage());
-        } finally {
-            // driver.quit(); // optional
-        }
-    }
-
-    public void runGherkinStyleTest(TestCaseDto testCase) {
-        WebDriver driver = new ChromeDriver();
-        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
-        for (StepDto step : testCase.getSteps()) {
-            action = step.getAction().toLowerCase();
-            locatorType = step.getLocatorType();  // ✅ use the correct getter
-            locatorValue = step.getProperty();    // ✅ property is the locator value
-            value = step.getValue();
-        }
-        try {
-            for (String step : testCase.getStepsAsText()) {
-                if (step.startsWith("navigate to")) {
-                    String url = step.replace("navigate to", "").trim();
-                    driver.get(url);
-
-                } else if (step.startsWith("enter")) {
-                    String[] parts = step.replace("enter", "").trim().split(" into ");
-                    if (parts.length == 2) {
-                        String value = parts[0].trim().replace("\"", "");
-                        String field = parts[1].trim().replace("\"", "");
-                        WebElement element = ElementFinder.findSmart(driver, field);
-
-                        element.clear();
-                        element.sendKeys(value);
-                    }
-
-                } else if (step.startsWith("keypress")) {
-                    // Example step: keypress "ENTER" key in "search"
-                    String[] parts = step.replace("keypress", "").replace("key", "").trim().split(" in ");
-                    if (parts.length == 2) {
-                        String keyName = parts[0].trim().replace("\"", "").toUpperCase(); // ENTER
-                        String field = parts[1].trim().replace("\"", "");
-
-                        WebElement element = ElementFinder.findSmart(driver, field);
-
-                        Keys key = getKeyFromString(keyName);
-                        if (key != null) {
-                            element.sendKeys(key);
-                        } else {
-                            System.out.printf("⚠️ Unknown key '%s'%n", keyName);
-                        }
-                    } else {
-                        System.out.println("⚠️ Invalid keypress step format");
-                    }
-
-
-                } else if (step.startsWith("click")) {
-                    // your existing click logic here...
-                    String field = step.replace("click", "").replace("button", "").trim().replace("\"", "");
-                    WebElement button = ElementFinder.findSmart(driver, field);
-                    // button = resolveLocator(getlocatortype, getproperty);
-                    button.click();
-
-                } else if (step.contains("should_see")) {
-
-                    WebElement element = ElementFinder.findSmart(driver, locatorValue);
-                    String expected = value;
-                    if (!element.isDisplayed() || !element.getText().contains(expected)) {
-                        throw new AssertionError("❌ Expected text not found or not visible: " + expected);
-                    }
-                    System.out.printf("🧐 Looking for element with title or text='%s'%n", expected);
-
-                    if (!driver.getPageSource().contains(expected)) {
-                        throw new AssertionError("Expected text not found: " + expected);
-                    }
-
-                }
-            }
-
-            System.out.println("✅ Gherkin-style test ran successfully.");
-        } catch (Exception e) {
-            System.out.println("❌ Gherkin-style test failed: " + e.getMessage());
-        } finally {
-            // driver.quit(); // optional
-        }
-    }
-
-
-    public void printTestCaseSummary(TestCaseDto testCase) {
-        System.out.println("\n======= TEST CASE SUMMARY =======");
-        System.out.printf("🧪 Feature:         %s%n", testCase.getFeatureName());
-        System.out.printf("🌐 Target URL:      %s%n%n", testCase.getTargetUrl());
-
-        System.out.println("🔁 Steps:");
-        List<StepDto> steps = testCase.getSteps();
-        int i = 1;
-        for (StepDto step : steps) {
-            System.out.printf("  %d. [%s] using [%s=%s] => %s%n", i++, step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue());
-        }
-
-        System.out.printf("%n🎯 Event Trigger: %s%n", testCase.getEventListener());
-        System.out.println("=================================\n");
-    }
-
-    public void saveTestCaseToFile(TestCaseDto testCase, String filename, boolean gherkin) {
-        try (FileWriter writer = new FileWriter(filename)) {
-            if (gherkin) {
-                for (String step : testCase.getStepsAsText()) {
-                    writer.write(step + System.lineSeparator());
-                }
-            } else {
-                writer.write("Feature: " + testCase.getFeatureName() + "\n");
-                writer.write("Target URL: " + testCase.getTargetUrl() + "\n");
-                writer.write("Event Trigger: " + testCase.getEventListener() + "\n\n");
-                for (StepDto step : testCase.getSteps()) {
-                    writer.write(String.format("Action: %s, Locator Type: %s, Locator Value: %s, Value: %s%n",
-                            step.getAction(), step.getLocatorType(), step.getProperty(), step.getValue()));
-                }
-            }
-            System.out.printf("✅ Test case saved to file: %s%n", filename);
-        } catch (IOException e) {
-            System.out.printf("❌ Failed to save test case to file: %s%n", e.getMessage());
-        }
-    }
-
-    private Keys getKeyFromString(String keyName) {
-        try {
-            return Keys.valueOf(keyName.toUpperCase());
-        } catch (IllegalArgumentException e) {
-            return null;
-        }
-    }
-}*/
-   /* private By resolveLocator(String locatorType, String property) {
-        switch (locatorType.toLowerCase()) {
-            case "id":
-                return By.id(property);
-            case "name":
-                return By.name(property);
-            case "css":
-                return By.cssSelector(property);
-            case "xpath":
-                return By.xpath(property);
-           /* case "alt":
-                return By.cssSelector("img[alt='" + property + "']");
-            case "alt":
-                // XPath for img with exact alt text match
-                return By.xpath("//img[@alt='" + property + "']");
-
-            case "tag":
-                return By.tagName(property);
-            default:
-                throw new IllegalArgumentException("❌ Unsupported locator type: " + locatorType);
-        }
-    }*/

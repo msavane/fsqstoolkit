@@ -22,19 +22,18 @@
       <version>4.21.0</version>
     </dependency>
 
-    <!-- WebDriver Manager (for automatic driver binaries) -->
+    <!-- API testing -->
     <dependency>
-      <groupId>io.github.bonigarcia</groupId>
-      <artifactId>webdrivermanager</artifactId>
-      <version>5.8.0</version>
+      <groupId>org.apache.httpcomponents.client5</groupId>
+      <artifactId>httpclient5</artifactId>
+      <version>5.5</version>
     </dependency>
 
-    <!-- (Optional) Cucumber for BDD-style automation -->
+    <!-- Cucumber BDD -->
     <dependency>
       <groupId>io.cucumber</groupId>
       <artifactId>cucumber-java</artifactId>
       <version>7.15.0</version>
-      <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>io.cucumber</groupId>
@@ -43,7 +42,14 @@
       <scope>test</scope>
     </dependency>
 
-    <!-- (Optional) JUnit for testing -->
+    <!-- WebDriver Manager -->
+    <dependency>
+      <groupId>io.github.bonigarcia</groupId>
+      <artifactId>webdrivermanager</artifactId>
+      <version>5.8.0</version>
+    </dependency>
+
+    <!-- JUnit -->
     <dependency>
       <groupId>junit</groupId>
       <artifactId>junit</artifactId>
