@@ -29,16 +29,12 @@ cd fsqstoolkit
 🔧 Build & Run
 If you're using Java and Maven:
 
-bash
-Copy
-Edit
+
 mvn clean install
 java -cp target/fsqstoolkit-*.jar runner.ConsoleRunner
 Or if compiled already:
 
-bash
-Copy
-Edit
+
 java runner.ConsoleRunner
 🧭 How It Works
 You'll be guided through:
@@ -53,18 +49,14 @@ Saving the test case for future use
 
 Example console flow:
 
-pgsql
-Copy
-Edit
+
 🎉 Welcome to FSQS Toolkit!
 How would you like to create a test?
 1. Load from file
 2. Create new test case
 Select option [1/2]:
 📁 File Structure
-bash
-Copy
-Edit
+
 src/
 ├── main/
 │   └── java/
