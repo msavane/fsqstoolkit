@@ -1,0 +1,6 @@
+Feature: log on
+Target URL: http://localhost:8080/
+Event Trigger: submit
+
+Action: type, Locator Type: id, Locator Value: email, Value: test@email.com
+Action: type, Locator Type: id, Locator Value: password, Value: 123
