@@ -3,16 +3,10 @@ package parser;
 import dto.StepDto;
 import dto.TestCaseDto;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.io.*;
+import java.nio.file.*;
 import java.util.*;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.regex.*;
 
 public class TestCaseParser {
 
@@ -20,14 +14,14 @@ public class TestCaseParser {
         List<String> lines;
 
         if (fileOrPath.contains("/") || fileOrPath.contains("\\")) {
-            // Treat as full or relative filesystem path, read directly
+            // Treat as path (absolute or relative)
             Path path = Paths.get(fileOrPath);
             if (!Files.exists(path)) {
-                throw new IOException("❌ File not found in filesystem: " + fileOrPath);
+                throw new IOException("❌ File not found: " + fileOrPath);
             }
             lines = Files.readAllLines(path);
         } else {
-            // Treat as classpath resource (legacy mode)
+            // Treat as classpath resource
             InputStream inputStream = Thread.currentThread()
                     .getContextClassLoader()
                     .getResourceAsStream("testcases/" + fileOrPath);
@@ -44,24 +38,32 @@ public class TestCaseParser {
             }
         }
 
+        if (fileOrPath.endsWith(".feature")) {
+            return parseGherkin(lines);
+        } else {
+            return parseLegacyScript(lines);
+        }
+    }
+
+    private TestCaseDto parseLegacyScript(List<String> lines) {
         TestCaseDto testCase = new TestCaseDto();
         List<StepDto> steps = new ArrayList<>();
 
         for (String ln : lines) {
             if (ln.isEmpty()) continue;
 
-            if (ln.startsWith("🧪 Feature:")) {
-                testCase.setFeatureName(ln.substring("🧪 Feature:".length()).trim());
+            if (ln.startsWith("🧪 Feature:") || ln.toLowerCase().startsWith("feature:")) {
+                testCase.setFeatureName(ln.substring(ln.indexOf(":") + 1).trim());
                 continue;
             }
 
-            if (ln.startsWith("🌐 Target URL:")) {
-                testCase.setTargetUrl(ln.substring("🌐 Target URL:".length()).trim());
+            if (ln.startsWith("🌐 Target URL:") || ln.toLowerCase().startsWith("target url:") || ln.toLowerCase().startsWith("navigate to ")) {
+                testCase.setTargetUrl(ln.substring(ln.indexOf(":") + 1).trim());
                 continue;
             }
 
-            if (ln.startsWith("🎯 Event Trigger:")) {
-                testCase.setEventListener(ln.substring("🎯 Event Trigger:".length()).trim());
+            if (ln.startsWith("🎯 Event Trigger:") || ln.toLowerCase().startsWith("event trigger:")) {
+                testCase.setEventListener(ln.substring(ln.indexOf(":") + 1).trim());
                 continue;
             }
 
@@ -76,29 +78,7 @@ public class TestCaseParser {
                 continue;
             }
 
-            if (ln.toLowerCase().startsWith("feature:")) {
-                testCase.setFeatureName(ln.substring("feature:".length()).trim());
-                continue;
-            }
-
-            if (ln.toLowerCase().startsWith("target url:")) {
-                testCase.setTargetUrl(ln.substring("target url:".length()).trim());
-                continue;
-            }
-
-            if (ln.toLowerCase().startsWith("event trigger:")) {
-                testCase.setEventListener(ln.substring("event trigger:".length()).trim());
-                continue;
-            }
-
-            if (ln.toLowerCase().startsWith("navigate to ")) {
-                testCase.setTargetUrl(ln.substring("navigate to ".length()).trim());
-                continue;
-            }
-
-            Matcher actionMatcher = Pattern.compile(
-                    "Action:\\s*(\\w+),\\s*Locator Type:\\s*([^,]+),\\s*Locator Value:\\s*([^,]+),\\s*Value:\\s*(.*)"
-            ).matcher(ln);
+            Matcher actionMatcher = Pattern.compile("Action:\\s*(\\w+),\\s*Locator Type:\\s*([^,]+),\\s*Locator Value:\\s*([^,]+),\\s*Value:\\s*(.*)").matcher(ln);
             if (actionMatcher.find()) {
                 steps.add(new StepDto(
                         actionMatcher.group(1).trim(),
@@ -147,15 +127,57 @@ public class TestCaseParser {
             }
         }
 
-        if (testCase.getFeatureName() == null || testCase.getFeatureName().isEmpty()) {
-            testCase.setFeatureName("Auto-parsed test case");
-        }
-        if (testCase.getEventListener() == null) {
-            testCase.setEventListener("");
-        }
+        if (testCase.getFeatureName() == null) testCase.setFeatureName("Auto-parsed test case");
+        if (testCase.getEventListener() == null) testCase.setEventListener("");
 
         testCase.setSteps(steps);
         return testCase;
+    }
+
+    private TestCaseDto parseGherkin(List<String> lines) {
+        TestCaseDto testCase = new TestCaseDto();
+        List<StepDto> steps = new ArrayList<>();
+
+        for (String line : lines) {
+            line = line.trim();
+            if (line.isEmpty()) continue;
+
+            if (line.startsWith("Feature:")) {
+                testCase.setFeatureName(line.substring("Feature:".length()).trim());
+            } else if (line.startsWith("Scenario:")) {
+                // optionally handle scenarios later
+            } else if (line.matches("^(Given|When|Then|And)\\b.*")) {
+                StepDto parsed = parseGherkinStep(line);
+                if (parsed != null) steps.add(parsed);
+            }
+        }
+
+        testCase.setSteps(steps);
+        if (testCase.getFeatureName() == null) testCase.setFeatureName("Gherkin Feature");
+
+        return testCase;
+    }
+
+    private StepDto parseGherkinStep(String line) {
+        // Normalize and extract step
+        line = line.replaceAll("^(Given|When|Then|And)\\s*", "");
+
+        Matcher enterMatcher = Pattern.compile("enter\\s+\"(.*?)\"\\s+into\\s+the\\s+\"(.*?)\"\\s+field", Pattern.CASE_INSENSITIVE).matcher(line);
+        if (enterMatcher.find()) {
+            return new StepDto("type", "name", enterMatcher.group(2).trim(), enterMatcher.group(1).trim());
+        }
+
+        Matcher pressMatcher = Pattern.compile("press\\s+the\\s+\"(.*?)\"\\s+key\\s+in\\s+the\\s+\"(.*?)\"\\s+field", Pattern.CASE_INSENSITIVE).matcher(line);
+        if (pressMatcher.find()) {
+            return new StepDto("keypress", "name", pressMatcher.group(2).trim(), pressMatcher.group(1).trim());
+        }
+
+        Matcher assertMatcher = Pattern.compile("see the\\s+\"(.*?)\"\\s+article page", Pattern.CASE_INSENSITIVE).matcher(line);
+        if (assertMatcher.find()) {
+            return new StepDto("assert", "title", assertMatcher.group(1).trim(), "");
+        }
+
+        return new StepDto("unknown", "text", "unknown", line); // fallback
     }
 }
 

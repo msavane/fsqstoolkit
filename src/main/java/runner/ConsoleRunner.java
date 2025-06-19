@@ -21,6 +21,7 @@ public class ConsoleRunner {
     private final Scanner scanner = new Scanner(System.in);
     private final TestCaseBuilder builder = new TestCaseBuilder();
     private final TestCaseService service = new TestCaseService();
+    String featureNameTc;
 
     public void run(TestCaseDto initialTestCase) {
         TestCaseDto testCase = initialTestCase;
@@ -93,6 +94,7 @@ public class ConsoleRunner {
             System.out.println("Available test cases:");
             for (int i = 0; i < availableFiles.size(); i++) {
                 System.out.println((i + 1) + ". " + availableFiles.get(i).getFileName());
+                featureNameTc = availableFiles.get(i).getFileName().toString();
             }
 
             int choice = Integer.parseInt(promptForInput("Enter number to load:"));
@@ -151,7 +153,8 @@ public class ConsoleRunner {
         switch (style) {
             case "1" -> service.runTestCase(testCase);
             case "2" -> {
-                Path featureFile = Paths.get("src/test/resources/features", testCase.getFeatureName() + ".feature");
+                //Path featureFile = Paths.get("src/test/resources/features", testCase.getClass() + ".feature");
+                Path featureFile = Paths.get("src/test/resources/features", featureNameTc );
                 if (!Files.exists(featureFile)) {
                     System.out.println("❌ Feature file not found: " + featureFile);
                 } else {

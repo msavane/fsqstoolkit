@@ -62,3 +62,75 @@ public class Main {
         }
     }
 }
+/*package cli;
+
+import dto.TestCaseDto;
+import parser.TestCaseParser;
+import runner.ConsoleRunner;
+
+import java.io.IOException;
+import java.util.Scanner;
+
+public class Main {
+    public static void main(String[] args) {
+        System.out.println("🎉 Welcome to FSQS Toolkit!");
+
+        Scanner scanner = new Scanner(System.in);
+        System.out.println("Choose execution style:");
+        System.out.println("1. FSQS Legacy Script (*.txt)");
+        System.out.println("2. Gherkin Cucumber Feature (*.feature)");
+        System.out.println("3. API Test Case (*.txt with GET/POST/etc)");
+        System.out.print("Your choice [1/2/3]: ");
+
+        String choice = scanner.nextLine();
+
+        switch (choice) {
+            case "1":
+                try {
+                    TestCaseParser parser = new TestCaseParser();
+                    TestCaseDto testCase = parser.loadFromScriptFile("pm1.txt");
+                    new ConsoleRunner().run(testCase);
+                } catch (IOException e) {
+                    System.err.println("❌ Failed to load test case: " + e.getMessage());
+                }
+                break;
+
+            case "2":
+                try {
+                    System.out.println("Available feature files (in src/test/resources/features/):");
+                    System.out.println("- ghstandardtest.feature");
+                    System.out.print("Enter feature file name (with .feature): ");
+                    String featureFile = scanner.nextLine().trim();
+
+                    String featurePath = "src/test/resources/features/" + featureFile;
+
+                    System.out.println("🧪 Running Cucumber Feature Test: " + featurePath);
+                    ProcessBuilder pb = new ProcessBuilder(
+                            "mvn", "test",
+                            "-Dcucumber.features=" + featurePath
+                    );
+                    pb.inheritIO();
+                    Process process = pb.start();
+                    int exitCode = process.waitFor();
+                    System.out.println("✅ Cucumber test completed with exit code: " + exitCode);
+                } catch (Exception e) {
+                    System.err.println("❌ Failed to run Cucumber tests: " + e.getMessage());
+                }
+                break;
+
+            case "3":
+                try {
+                    TestCaseParser parser = new TestCaseParser();
+                    TestCaseDto apiTest = parser.loadFromScriptFile("getPostTest.txt");
+                    new ConsoleRunner().run(apiTest);
+                } catch (IOException e) {
+                    System.err.println("❌ Failed to load API test case: " + e.getMessage());
+                }
+                break;
+
+            default:
+                System.out.println("⚠️ Invalid choice. Exiting.");
+        }
+    }
+}
+*/
