@@ -60,6 +60,8 @@ public class TestCaseService {
                             break;
 
                         case "click":
+                            wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+                            wait.until(ExpectedConditions.elementToBeClickable(element));
                             element.click();
                             break;
 

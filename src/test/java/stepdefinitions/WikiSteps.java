@@ -6,6 +6,9 @@ import org.openqa.selenium.Keys;
 import org.openqa.selenium.WebDriver;
 import org.openqa.selenium.WebElement;
 import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+import java.time.Duration;
 
 import static org.junit.Assert.assertTrue;
 
@@ -36,7 +39,12 @@ public class WikiSteps {
 
     @Then("I should see the {string} article page")
     public void i_should_see_the_article_page(String articleTitle) {
-        assertTrue(driver.getTitle().toLowerCase().contains(articleTitle.toLowerCase()));
+        WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
+        wait.until(ExpectedConditions.titleContains(articleTitle));
+
+        String actualTitle = driver.getTitle();
+        assertTrue("Expected title to contain '" + articleTitle + "', but was: " + actualTitle,
+                actualTitle.toLowerCase().contains(articleTitle.toLowerCase()));
         driver.quit();
     }
 }
