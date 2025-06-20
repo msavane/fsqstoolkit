@@ -61,8 +61,12 @@ public class TestCaseParser {
                 testCase.setTargetUrl(ln.substring(ln.indexOf(":") + 1).trim());
                 continue;
             }
-
+            /*if (ln.startsWith("🎯 Event Trigger:")) {
+                testCase.setEventListener(ln.substring("🎯 Event Trigger:".length()).trim());
+                continue;
+            }*/
             if (ln.startsWith("🎯 Event Trigger:") || ln.toLowerCase().startsWith("event trigger:")) {
+                //testCase.setEventListener(ln.substring("🎯 Event Trigger:".length()).trim());
                 testCase.setEventListener(ln.substring(ln.indexOf(":") + 1).trim());
                 continue;
             }

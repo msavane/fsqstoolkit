@@ -49,6 +49,7 @@ public class ConsoleRunner {
             testCase = null;
         }
 
+
         System.out.println("👋 Exiting FSQS Toolkit. Goodbye!");
         scanner.close();
     }
@@ -216,6 +217,7 @@ public class ConsoleRunner {
         } while (!input.equals("y") && !input.equals("n"));
         return input;
     }
+
 
     private String promptChoice(String message, String... validOptions) {
         String input;

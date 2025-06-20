@@ -16,8 +16,6 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TestCaseService {
 
@@ -60,7 +58,6 @@ public class TestCaseService {
                             break;
 
                         case "click":
-                            wait = new WebDriverWait(driver, Duration.ofSeconds(10));
                             wait.until(ExpectedConditions.elementToBeClickable(element));
                             element.click();
                             break;
@@ -83,6 +80,25 @@ public class TestCaseService {
                 }
             }
 
+            // 🔘 Auto-trigger final event (e.g., click login button by ID or CSS selector)
+            if (testCase.getEventListener() != null && !testCase.getEventListener().isBlank()) {
+                System.out.println("🚀 Triggering event: " + testCase.getEventListener());
+                try {
+                    WebElement triggerElement = ElementFinder.findSmart(driver, testCase.getEventListener(), "id");
+                    wait.until(ExpectedConditions.elementToBeClickable(triggerElement));
+                    triggerElement.click();
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    System.out.println("⚠️ Failed to trigger event by ID, trying as CSS selector...");
+                    try {
+                        WebElement triggerFallback = ElementFinder.findSmart(driver, testCase.getEventListener(), "css");
+                        triggerFallback.click();
+                    } catch (Exception ex) {
+                        System.out.println("❌ Event trigger failed: " + ex.getMessage());
+                    }
+                }
+            }
+
             System.out.println("✅ Test ran successfully.");
 
         } catch (Exception e) {
@@ -100,7 +116,6 @@ public class TestCaseService {
         try {
             int i = 0;
             for (String step : testCase.getStepsAsText()) {
-
                 if (step.startsWith("navigate to")) {
                     driver.get(step.replace("navigate to", "").trim());
 
@@ -126,6 +141,20 @@ public class TestCaseService {
                     String val = raw.replace("assert", "").trim();
                     ElementFinder.findSmart(driver, val, locatorType.get(i));
                     assertGenericPresence(driver, step);
+                }
+                i++;
+            }
+
+            // 🔘 Trigger final event if declared (same logic as standard)
+            if (testCase.getEventListener() != null && !testCase.getEventListener().isBlank()) {
+                System.out.println("🚀 Triggering event: " + testCase.getEventListener());
+                try {
+                    WebElement triggerElement = ElementFinder.findSmart(driver, testCase.getEventListener(), "id");
+                    wait.until(ExpectedConditions.elementToBeClickable(triggerElement));
+                    triggerElement.click();
+                    Thread.sleep(1000);
+                } catch (Exception e) {
+                    System.out.println("⚠️ Event trigger failed: " + e.getMessage());
                 }
             }
 
@@ -187,20 +216,10 @@ public class TestCaseService {
 
     public void assertGenericPresence(WebDriver driver, String expectedLocatorValue) {
         WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(15));
-
-        String titleText = null;
-        if (expectedLocatorValue.contains("title=")) {
-            int index = expectedLocatorValue.indexOf("title=") + 6;
-            titleText = expectedLocatorValue.substring(index).trim();
-            if (titleText.endsWith("]")) {
-                titleText = titleText.substring(0, titleText.length() - 1).trim();
-            }
-        } else {
-            titleText = expectedLocatorValue;
-        }
-
+        String titleText = expectedLocatorValue.contains("title=")
+                ? expectedLocatorValue.substring(expectedLocatorValue.indexOf("title=") + 6).replace("]", "").trim()
+                : expectedLocatorValue;
         By locator = By.xpath("//*[@title='" + titleText + "']");
-
         wait.until(ExpectedConditions.visibilityOfElementLocated(locator));
         System.out.println("✅ Assertion passed: " + titleText);
     }
@@ -215,10 +234,8 @@ public class TestCaseService {
 
     public void printTestCaseSummary(TestCaseDto testCase) {
         System.out.println("\n======= TEST CASE SUMMARY =======");
-
         System.out.printf("🧪 Feature:         %s%n", safe(testCase.getFeatureName()));
         System.out.printf("🌐 Target URL:      %s%n%n", safe(testCase.getTargetUrl()));
-
         System.out.println("🔁 Steps:");
         List<StepDto> steps = testCase.getSteps();
         int i = 1;
@@ -229,7 +246,6 @@ public class TestCaseService {
                     safe(step.getProperty()),
                     safe(step.getValue()));
         }
-
         System.out.printf("%n🎯 Event Trigger: %s%n", safe(testCase.getEventListener()));
         System.out.println("=================================\n");
     }
@@ -263,3 +279,4 @@ public class TestCaseService {
         return input != null ? input : "";
     }
 }
+
