@@ -153,14 +153,31 @@ public class ConsoleRunner {
 
         switch (style) {
             case "1" -> service.runTestCase(testCase);
-            case "2" -> {
+           /* case "2" -> {
                 //Path featureFile = Paths.get("src/test/resources/features", testCase.getClass() + ".feature");
                 Path featureFile = Paths.get("src/test/resources/features", featureNameTc );
                 if (!Files.exists(featureFile)) {
                     System.out.println("❌ Feature file not found: " + featureFile);
                 } else {
                     runFeatureSmart(featureFile.toString());
+                }*/
+            case "2" -> {
+                String featureFilePath;
+
+                // If user loaded from file, we already have a filename
+                if (featureNameTc != null && !featureNameTc.isEmpty()) {
+                    featureFilePath = Paths.get("src/test/resources/features", featureNameTc).toString();
+                } else {
+                    // Otherwise dynamically generate and write a temp file
+                    featureFilePath = writeTempFeatureFile(testCase);
                 }
+
+                if (featureFilePath == null || !Files.exists(Paths.get(featureFilePath))) {
+                    System.out.println("❌ Unable to run Gherkin test case. Feature file not found or invalid.");
+                } else {
+                    runFeatureSmart(featureFilePath);
+                }
+
             }
             case "3" -> service.runRestTestCase(testCase);
         }
@@ -239,6 +256,31 @@ public class ConsoleRunner {
     private String promptForInput(String message) {
         System.out.println(message);
         return scanner.nextLine().trim();
+    }
+
+    private String writeTempFeatureFile(TestCaseDto testCase) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Feature: ").append(testCase.getFeatureName()).append("\n\n");
+
+        for (var step : testCase.getSteps()) {
+            sb.append("  ").append(step.getLocatorType()) // e.g., Given, When, Then
+                    .append(" ").append(step.getProperty())    // e.g., I open the Wikipedia page
+                    .append("\n");
+        }
+
+        try {
+            Path dir = Paths.get("src/test/resources/features");
+            if (!Files.exists(dir)) {
+                Files.createDirectories(dir);
+            }
+
+            Path tempFile = dir.resolve("temp_dynamic.feature");
+            Files.write(tempFile, sb.toString().getBytes());
+            return tempFile.toString();
+        } catch (IOException e) {
+            System.err.println("❌ Failed to write temp Gherkin feature file: " + e.getMessage());
+            return null;
+        }
     }
 }
 
